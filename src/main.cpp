@@ -530,6 +530,7 @@ void loopMenuDemo()
     }
     scrollText("!\"#$%&'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_");
     doDisplayUpdate = 1;
+    modeTimeout = 10000;
   }
 }
 
