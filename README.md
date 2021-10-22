@@ -1,6 +1,6 @@
 # AlphaClock
 
-Running old LED displays (DL-2416T) with an ATmega328 and a DS3231 RTC module to display time and temperature.
+Running old LED displays (DL-2416T) with an ATmega328P and a DS3231 RTC module to display time and temperature.
 
 Copyright (C) 2021 Arno Welzel
 
@@ -17,3 +17,5 @@ Schematics are included as PDF. A PCB as KiCad project may follow in the future.
 ## How to build the software
 
 I use [Visual Studio Code](https://code.visualstudio.com) with [PlatformIO](https://platformio.org).
+
+To upload the software to the ATmega328P you need an AVR programmer. If needed, adjust the programmer configuration in `platformio.ini`.
