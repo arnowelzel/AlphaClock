@@ -528,7 +528,7 @@ void loopMenuDemo()
       sendText("////////");
       delay(50);
     }
-    scrollText("!\"#$%&'()*+,-/0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_");
+    scrollText("!\"#$%&'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_");
     doDisplayUpdate = 1;
   }
 }
