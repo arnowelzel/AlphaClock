@@ -895,7 +895,7 @@ void loop() {
     }
   }
 
-  // Dot blink timer
+  // Blink timer
 
   if (blinkTimeout > 1) {
     blinkTimeout--;
