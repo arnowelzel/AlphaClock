@@ -318,7 +318,7 @@ void setup() {
     // setup interrupt for time display update
     
     pinMode(RTC_PIN, INPUT_PULLUP);
-    attachInterrupt(digitalPinToInterrupt(RTC_PIN), handleInterruptRTC, RISING);
+    attachInterrupt(digitalPinToInterrupt(RTC_PIN), handleInterruptRTC, FALLING);
 
     // tell the RTC to output a 1 Hz signal for the interrupt trigger
     
@@ -634,7 +634,7 @@ void loopSetTime()
 
     snprintf(lineout, 9, "%02d:%02d:%02d", setHour, setMinute, setSecond);
 
-    if(blinkTimeout > 0) {
+    if(0 == blinkTimeout) {
       int pos = 0;
       if (OP_SET_MINUTE == operationMode) {
         pos = 3;
@@ -672,7 +672,7 @@ void loopSetTime()
           break;
       }
       doDisplayUpdate = 1;
-      blinkTimeout = 0;
+      blinkTimeout = 500;
 
       if (buttonRepeat1) {
         delay(100);
@@ -684,17 +684,17 @@ void loopSetTime()
       case OP_SET_HOUR:
         operationMode = OP_SET_MINUTE;
         doDisplayUpdate = 1;
-        blinkTimeout = 0;
+        blinkTimeout = 500;
         break;
       case OP_SET_MINUTE:
         operationMode = OP_SET_SECOND;
         doDisplayUpdate = 1;
-        blinkTimeout = 0;
+        blinkTimeout = 500;
         break;
       case OP_SET_SECOND:
         operationMode = OP_TIME;
         doDisplayUpdate = 1;
-        blinkTimeout = 0;
+        blinkTimeout = 500;
         DateTime now = rtc.now();
         rtc.adjust(DateTime(now.year(), now.month(), now.day(), setHour, setMinute, setSecond));
         break;
@@ -735,7 +735,7 @@ void loopSetDate()
         snprintf(lineout, 9, "D: %02d %s", setDay, dayoutput);
         break;
     }
-    if (blinkTimeout > 0) {
+    if (0 == blinkTimeout) {
       lineout[3] = 0;
     }
 
@@ -802,7 +802,7 @@ void loopSetDate()
           break;
       }
       doDisplayUpdate = 1;
-      blinkTimeout = 0;
+      blinkTimeout = 500;
 
       if (buttonRepeat1) {
         delay(100);
@@ -814,17 +814,17 @@ void loopSetDate()
       case OP_SET_YEAR:
         operationMode = OP_SET_MONTH;
         doDisplayUpdate = 1;
-        blinkTimeout = 0;
+        blinkTimeout = 500;
         break;
       case OP_SET_MONTH:
         operationMode = OP_SET_DAY;
         doDisplayUpdate = 1;
-        blinkTimeout = 0;
+        blinkTimeout = 500;
         break;
       case OP_SET_DAY:
         operationMode = OP_TIME;
         doDisplayUpdate = 1;
-        blinkTimeout = 0;
+        blinkTimeout = 500;
         DateTime now = rtc.now();
         rtc.adjust(DateTime(setYear, setMonth, setDay, now.hour(), now.minute(), now.second()));
         break;
@@ -845,7 +845,7 @@ void loopSetBrightness()
 
     snprintf(lineout, 9, "L: %03d%%", displayBrightness);
 
-    if(blinkTimeout > 0) {
+    if(0 == blinkTimeout) {
       lineout[3] = 0;
     }
 
@@ -861,7 +861,7 @@ void loopSetBrightness()
       }
       analogWrite(PWM_OUT, displayBrightness * 255 / 100);
       doDisplayUpdate = 1;
-      blinkTimeout = 0;
+      blinkTimeout = 500;
 
       if (buttonRepeat1) {
         delay(100);
@@ -871,7 +871,7 @@ void loopSetBrightness()
     buttonHandled2 = 1;
     operationMode = OP_TIME;
     doDisplayUpdate = 1;
-    blinkTimeout = 0;
+    blinkTimeout = 500;
   }
 }
 
