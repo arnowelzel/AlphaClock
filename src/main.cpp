@@ -1,5 +1,5 @@
 /*
- * AlphaClock 1.0
+ * AlphaClock 1.1
  * 
  * Copyright 2021 Arno Welzel / https://arnowelzel.de
  * 
@@ -21,6 +21,7 @@
 
 #include <Arduino.h>
 #include <RTClib.h>
+#include <EEPROM.h>
 
 RTC_DS3231 rtc;
 int rtcFound;
@@ -63,6 +64,8 @@ const int OP_SET_YEAR = 13;
 const int OP_SET_MONTH = 14;
 const int OP_SET_DAY = 15;
 const int OP_SET_BRIGHTNESS = 16;
+
+const int STORAGE_BRIGHTNESS = 0;
 
 // --------------------------------------------------------------------------
 // Pin mapping
@@ -303,6 +306,17 @@ void setup() {
   buttonHandled1 = 0;
   buttonHandled2 = 0;
 
+  // restore settings
+
+  displayBrightness = EEPROM.read(STORAGE_BRIGHTNESS);
+  if (displayBrightness < 10) {
+    displayBrightness = 10;
+    EEPROM.write(STORAGE_BRIGHTNESS, displayBrightness);
+  } else if (displayBrightness > 100) {
+    displayBrightness = 100;
+    EEPROM.write(STORAGE_BRIGHTNESS, displayBrightness);
+  }
+
   // initialize RTC module
   
   if (rtc.begin()) {
@@ -338,6 +352,9 @@ void setup() {
   }
 
   lastSoftTimeout = millis();
+
+  // restore configured brightness
+  analogWrite(PWM_OUT, displayBrightness * 255 / 100);
 }
 
 // --------------------------------------------------------------------------
@@ -855,7 +872,7 @@ void loopSetBrightness()
   if (LOW == buttonState1) {
     if (!buttonHandled1 || buttonRepeat1) {
       buttonHandled1 = 1;
-      displayBrightness += 1;
+      displayBrightness += 5;
       if (displayBrightness > 100) {
         displayBrightness = 10;
       }
@@ -872,6 +889,8 @@ void loopSetBrightness()
     operationMode = OP_TIME;
     doDisplayUpdate = 1;
     blinkTimeout = 500;
+
+    EEPROM.write(STORAGE_BRIGHTNESS, displayBrightness);
   }
 }
 
