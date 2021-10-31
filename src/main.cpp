@@ -1,5 +1,5 @@
 /*
- * AlphaClock 1.1
+ * AlphaClock 1.2
  * 
  * Copyright 2021 Arno Welzel / https://arnowelzel.de
  * 
@@ -24,21 +24,21 @@
 #include <EEPROM.h>
 
 RTC_DS3231 rtc;
-int rtcFound;
+bool rtcFound;
 int operationMode;
 int menuMode;
 int modeTimeout;
 int modeTarget;
 int displayBrightness;
-int doDisplayUpdate;
+bool doDisplayUpdate;
 int buttonState1;
 int buttonState2;
 int lastButtonState1;
 int lastButtonState2;
-int buttonHandled1;
-int buttonHandled2;
-int buttonRepeat1;
-int buttonRepeat2;
+bool buttonHandled1;
+bool buttonHandled2;
+bool buttonRepeat1;
+bool buttonRepeat2;
 unsigned long lastDebounceTime1 = 0;
 unsigned long lastDebounceTime2 = 0;
 unsigned long debounceDelay = 50;
@@ -46,6 +46,7 @@ unsigned long blinkTimeout = 0;
 unsigned long lastSoftTimeout = 0;
 
 int setHour, setMinute, setSecond;
+bool secondChanged;
 int setYear, setMonth, setDay;
 
 const int OP_TIME = 1;
@@ -260,7 +261,7 @@ void handleInterruptRTC()
   }
 
   // Trigger display update
-  doDisplayUpdate = 1;
+  doDisplayUpdate = true;
 }
 
 // --------------------------------------------------------------------------
@@ -296,15 +297,15 @@ void setup() {
   operationMode = OP_TIME;
   modeTimeout = 0;
   modeTarget = OP_TIME;
-  rtcFound = 0;
-  doDisplayUpdate = 0;
+  rtcFound = false;
+  doDisplayUpdate = false;
   displayBrightness = 100;
   buttonState1 = HIGH;
   buttonState2 = HIGH;
   lastButtonState1 = HIGH;
   lastButtonState2 = HIGH;
-  buttonHandled1 = 0;
-  buttonHandled2 = 0;
+  buttonHandled1 = false;
+  buttonHandled2 = false;
 
   // restore settings
 
@@ -320,7 +321,7 @@ void setup() {
   // initialize RTC module
   
   if (rtc.begin()) {
-    rtcFound = 1;
+    rtcFound = true;
 
     // if RTC lost its power (battery empty/missing) set time
     // to modification time of this file
@@ -341,7 +342,7 @@ void setup() {
 
   // display welcome message
   
-  sendText("INIT OK");
+  sendText("V 1.2");
   delay(1000);
   if (!rtcFound) {
     sendText("NO RTC");
@@ -363,7 +364,8 @@ void setup() {
 
 void readButtonDebounced(int num)
 {
-  int port, *lastButtonState, *buttonState, *buttonHandled, *buttonRepeat;
+  int port, *lastButtonState, *buttonState;
+  bool *buttonHandled, *buttonRepeat;
   long unsigned int *lastDebounceTime;
   
   // Set references depending on which button we want to read
@@ -404,14 +406,14 @@ void readButtonDebounced(int num)
     if (reading != *buttonState)
     {
       *buttonState = reading;
-      *buttonHandled = 0;
-      *buttonRepeat = 0;
+      *buttonHandled = false;
+      *buttonRepeat = false;
     } else {
 
       // If state did not change, check if button is already in repeat mode
 
       if (*buttonState == LOW && millis() - lastDebounceTime1 > 2000) {
-        *buttonRepeat = 1;
+        *buttonRepeat = true;
       }
     }
   }
@@ -424,7 +426,7 @@ void readButtonDebounced(int num)
 void handleDisplayUpdateFunction(void (*displayFunc)(void))
 {
   if (doDisplayUpdate) {
-    doDisplayUpdate = 0;
+    doDisplayUpdate = false;
     displayFunc();
   }
 }
@@ -436,7 +438,7 @@ void handleDisplayUpdateFunction(void (*displayFunc)(void))
 void handleDisplayUpdateText(const char *text)
 {
   if (doDisplayUpdate) {
-    doDisplayUpdate = 0;
+    doDisplayUpdate = false;
     sendText(text);
   }
 }
@@ -447,7 +449,7 @@ void handleDisplayUpdateText(const char *text)
 
 void setButtonHandled(int num, int newOperationMode, int newModeTimeout, int newModeTarget)
 {
-  int *buttonHandled;
+  bool *buttonHandled;
 
   if (1 == num) {
     buttonHandled = &buttonHandled1;
@@ -455,11 +457,40 @@ void setButtonHandled(int num, int newOperationMode, int newModeTimeout, int new
     buttonHandled = &buttonHandled2;
   }
 
-  *buttonHandled = 1;
+  *buttonHandled = true;
   operationMode = newOperationMode;
-  doDisplayUpdate = 1;
+  doDisplayUpdate = true;
   modeTimeout = newModeTimeout;
   modeTarget = newModeTarget;
+}
+
+// --------------------------------------------------------------------------
+// Set date of RTC with current set values
+// --------------------------------------------------------------------------
+
+void setRTCDate()
+{
+  if (!rtcFound) {
+    return;
+  }
+
+  DateTime now = rtc.now();
+  rtc.adjust(DateTime(setYear, setMonth, setDay, now.hour(), now.minute(), now.second()));
+}
+
+
+// --------------------------------------------------------------------------
+// Set time of RTC with current set values
+// --------------------------------------------------------------------------
+
+void setRTCTime()
+{
+  if (!rtcFound) {
+    return;
+  }
+
+  DateTime now = rtc.now();
+  rtc.adjust(DateTime(now.year(), now.month(), now.day(), setHour, setMinute, setSecond));
 }
 
 // --------------------------------------------------------------------------
@@ -534,7 +565,7 @@ void loopMenuDemo()
 
     setButtonHandled(1, OP_MENU_SETTIME, 10000, OP_TIME);
   } else if (LOW == buttonState2 && !buttonHandled2) {
-    buttonHandled2 = 1;
+    buttonHandled2 = true;
     for(int n=0; n<20; n++) {
       sendText("--------");
       delay(50);
@@ -546,7 +577,7 @@ void loopMenuDemo()
       delay(50);
     }
     scrollText("!\"#$%&'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_");
-    doDisplayUpdate = 1;
+    doDisplayUpdate = true;
     modeTimeout = 10000;
   }
 }
@@ -562,18 +593,15 @@ void loopMenuSetTime()
   if (LOW == buttonState1 && !buttonHandled1) {
     setButtonHandled(1, OP_MENU_SETDATE, 10000, OP_TIME);
   } else if (LOW == buttonState2 && !buttonHandled2) {
-    buttonHandled2 = 1;
+    buttonHandled2 = true;
     if (!rtcFound) {
       sendText("NO RTC");
       delay(1000);
     } else {
       operationMode = OP_SET_HOUR;
       modeTimeout = 0;
-      DateTime now = rtc.now();
-      setHour = now.hour();
-      setMinute = now.minute();
-      setSecond = now.second();
-      doDisplayUpdate = 1;
+      secondChanged = false;
+      doDisplayUpdate = true;
     }
   }
 }
@@ -589,18 +617,14 @@ void loopMenuSetDate()
   if (LOW == buttonState1 && !buttonHandled1) {
     setButtonHandled(1, OP_MENU_SETBRIGHTNESS, 10000, OP_TIME);
   } else if (LOW == buttonState2 && !buttonHandled2) {
-    buttonHandled2 = 1;
+    buttonHandled2 = true;
     if (!rtcFound) {
       sendText("NO RTC");
       delay(1000);
     } else {
       operationMode = OP_SET_YEAR;
       modeTimeout = 0;
-      DateTime now = rtc.now();
-      setYear = now.year();
-      setMonth = now.month();
-      setDay = now.day();
-      doDisplayUpdate = 1;
+      doDisplayUpdate = true;
     }
   }
 }
@@ -616,10 +640,10 @@ void loopMenuSetBrightness()
   if (LOW == buttonState1 && !buttonHandled1) {
     setButtonHandled(1, OP_MENU_EXIT, 10000, OP_TIME);
   } else if (LOW == buttonState2 && !buttonHandled2) {
-    buttonHandled2 = 1;
+    buttonHandled2 = true;
     operationMode = OP_SET_BRIGHTNESS;
     modeTimeout = 0;
-    doDisplayUpdate = 1;
+    doDisplayUpdate = true;
   }
 }
 
@@ -645,8 +669,18 @@ void loopMenuExit()
 void loopSetTime()
 {
   if (doDisplayUpdate) {
-    doDisplayUpdate = 0;
-    
+    doDisplayUpdate = false;
+
+    if (rtcFound) {
+      DateTime now = rtc.now();
+
+      if (!secondChanged) {
+        setHour = now.hour();
+        setMinute = now.minute();
+        setSecond = now.second();
+      }
+    }
+
     char lineout[9];
 
     snprintf(lineout, 9, "%02d:%02d:%02d", setHour, setMinute, setSecond);
@@ -667,28 +701,32 @@ void loopSetTime()
 
   if (LOW == buttonState1) {
     if (!buttonHandled1 || buttonRepeat1) {
-      buttonHandled1 = 1;
+      buttonHandled1 = true;
       switch (operationMode) {
         case OP_SET_HOUR:
           setHour++;
           if (setHour > 23) {
             setHour = 0;
           }
+          setRTCTime();
           break;
         case OP_SET_MINUTE:
           setMinute++;
           if (setMinute > 59) {
             setMinute = 0;
           }
+          setRTCTime();
           break;
         case OP_SET_SECOND:
+          secondChanged = true;
           setSecond++;
           if (setSecond > 59) {
             setSecond = 0;
           }
+          setRTCTime();
           break;
       }
-      doDisplayUpdate = 1;
+      doDisplayUpdate = true;
       blinkTimeout = 500;
 
       if (buttonRepeat1) {
@@ -696,24 +734,25 @@ void loopSetTime()
       }
     }
   } else if (LOW == buttonState2 && !buttonHandled2) {
-    buttonHandled2 = 1;
+    buttonHandled2 = true;
     switch (operationMode) {
       case OP_SET_HOUR:
         operationMode = OP_SET_MINUTE;
-        doDisplayUpdate = 1;
+        doDisplayUpdate = true;
         blinkTimeout = 500;
         break;
       case OP_SET_MINUTE:
         operationMode = OP_SET_SECOND;
-        doDisplayUpdate = 1;
+        doDisplayUpdate = true;
         blinkTimeout = 500;
         break;
       case OP_SET_SECOND:
         operationMode = OP_TIME;
-        doDisplayUpdate = 1;
+        doDisplayUpdate = true;
         blinkTimeout = 500;
-        DateTime now = rtc.now();
-        rtc.adjust(DateTime(now.year(), now.month(), now.day(), setHour, setMinute, setSecond));
+        if (secondChanged) {
+          setRTCTime();
+        }
         break;
     }
   }
@@ -726,7 +765,15 @@ void loopSetTime()
 void loopSetDate()
 {
   if (doDisplayUpdate) {
-    doDisplayUpdate = 0;
+    doDisplayUpdate = false;
+
+    if (rtcFound)
+    {
+      DateTime now = rtc.now();
+      setYear = now.year();
+      setMonth = now.month();
+      setDay = now.day();
+    }
     
     char lineout[9];
 
@@ -759,32 +806,34 @@ void loopSetDate()
     sendText(lineout);
   }
 
-  int isLeapYear;
+  bool isLeapYear;
   if (setYear % 400 == 0) {
-    isLeapYear = 1;
+    isLeapYear = true;
   } else if (setYear % 100 == 0) {
-    isLeapYear = 0;
+    isLeapYear = false;
   } else if (setYear % 4) {
-    isLeapYear = 1;
+    isLeapYear = true;
   } else {
-    isLeapYear = 0;
+    isLeapYear = false;
   }
 
   if (LOW == buttonState1) {
     if (!buttonHandled1 || buttonRepeat1) {
-      buttonHandled1 = 1;
+      buttonHandled1 = true;
       switch (operationMode) {
         case OP_SET_YEAR:
           setYear++;
           if (setYear > 2037) {
             setYear = 2021;
           }
+          setRTCDate();
           break;
         case OP_SET_MONTH:
           setMonth++;
           if (setMonth > 11) {
             setMonth = 1;
           }
+          setRTCDate();
           break;
         case OP_SET_DAY:
           setDay++;
@@ -816,9 +865,10 @@ void loopSetDate()
               }
               break;
           }
+          setRTCDate();
           break;
       }
-      doDisplayUpdate = 1;
+      doDisplayUpdate = true;
       blinkTimeout = 500;
 
       if (buttonRepeat1) {
@@ -826,24 +876,22 @@ void loopSetDate()
       }
     }
   } else if (LOW == buttonState2 && !buttonHandled2) {
-    buttonHandled2 = 1;
+    buttonHandled2 = true;
     switch (operationMode) {
       case OP_SET_YEAR:
         operationMode = OP_SET_MONTH;
-        doDisplayUpdate = 1;
+        doDisplayUpdate = true;
         blinkTimeout = 500;
         break;
       case OP_SET_MONTH:
         operationMode = OP_SET_DAY;
-        doDisplayUpdate = 1;
+        doDisplayUpdate = true;
         blinkTimeout = 500;
         break;
       case OP_SET_DAY:
         operationMode = OP_TIME;
-        doDisplayUpdate = 1;
+        doDisplayUpdate = true;
         blinkTimeout = 500;
-        DateTime now = rtc.now();
-        rtc.adjust(DateTime(setYear, setMonth, setDay, now.hour(), now.minute(), now.second()));
         break;
     }
   }
@@ -856,7 +904,7 @@ void loopSetDate()
 void loopSetBrightness()
 {
   if (doDisplayUpdate) {
-    doDisplayUpdate = 0;
+    doDisplayUpdate = false;
     
     char lineout[9];
 
@@ -871,13 +919,13 @@ void loopSetBrightness()
 
   if (LOW == buttonState1) {
     if (!buttonHandled1 || buttonRepeat1) {
-      buttonHandled1 = 1;
+      buttonHandled1 = true;
       displayBrightness += 5;
       if (displayBrightness > 100) {
         displayBrightness = 10;
       }
       analogWrite(PWM_OUT, displayBrightness * 255 / 100);
-      doDisplayUpdate = 1;
+      doDisplayUpdate = true;
       blinkTimeout = 500;
 
       if (buttonRepeat1) {
@@ -885,9 +933,9 @@ void loopSetBrightness()
       }
     }
   } else if (LOW == buttonState2 && !buttonHandled2) {
-    buttonHandled2 = 1;
+    buttonHandled2 = true;
     operationMode = OP_TIME;
-    doDisplayUpdate = 1;
+    doDisplayUpdate = true;
     blinkTimeout = 500;
 
     EEPROM.write(STORAGE_BRIGHTNESS, displayBrightness);
@@ -909,7 +957,7 @@ void loop() {
   if (!rtcFound) {
     if (millis() - lastSoftTimeout > 999) {
       blinkTimeout = 500;
-      doDisplayUpdate = 1;
+      doDisplayUpdate = true;
       lastSoftTimeout = millis();
     }
   }
@@ -920,7 +968,7 @@ void loop() {
     blinkTimeout--;
   } else if (1 == blinkTimeout) {
     blinkTimeout = 0;
-    doDisplayUpdate = 1;
+    doDisplayUpdate = true;
   }
 
   // Countdown timer for new operation mode if set

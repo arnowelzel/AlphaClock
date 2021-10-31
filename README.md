@@ -45,8 +45,6 @@ In menu mode button 1 will enter the selected function and change to the active 
 - LIGHT - store the selected brightness.
 - EXIT - will leave the menu and return to time display.
 
-Note: to exit any of the settings without changing anything, press the reset button.
-
 ## Schematics
 
 Schematics are included as PDF. A PCB as KiCad project may follow in the future.
@@ -58,6 +56,12 @@ I use [Visual Studio Code](https://code.visualstudio.com) with [PlatformIO](http
 To upload the software to the ATmega328P you need an AVR programmer. If needed, adjust the programmer configuration in `platformio.ini`.
 
 ## Changelog
+
+### 1.2
+
+Changed date and time setting modes: the time will continue to update in setting modes as long as the seconds are not changed manually.
+
+Use `bool` for flags instead of `int`.
 
 ### 1.1
 
