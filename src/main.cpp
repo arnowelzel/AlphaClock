@@ -830,7 +830,7 @@ void loopSetDate()
           break;
         case OP_SET_MONTH:
           setMonth++;
-          if (setMonth > 11) {
+          if (setMonth > 12) {
             setMonth = 1;
           }
           setRTCDate();
