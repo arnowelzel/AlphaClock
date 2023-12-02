@@ -57,6 +57,10 @@ To upload the software to the ATmega328P you need an AVR programmer. If needed, 
 
 ## Changelog
 
+### 1.3
+
+Fixed date setting.
+
 ### 1.2
 
 Changed date and time setting modes: the time will continue to update in setting modes as long as the seconds are not changed manually.
