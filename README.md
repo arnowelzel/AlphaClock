@@ -2,7 +2,7 @@
 
 Running old LED displays (DL-2416T) with an ATmega328P and a DS3231 RTC module to display time and temperature.
 
-Copyright (C) 2021 Arno Welzel
+Copyright (C) 2021-2023 Arno Welzel
 
 This program is free software: you can redistribute it and/or modify it under the terms of the GNU General Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version.
 
