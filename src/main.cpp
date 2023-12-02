@@ -1,7 +1,7 @@
 /*
- * AlphaClock 1.2
+ * AlphaClock 1.3
  * 
- * Copyright 2021 Arno Welzel / https://arnowelzel.de
+ * Copyright 2021-2023 Arno Welzel / https://arnowelzel.de
  * 
  * Hardware: ATmega328P, Adafruit DS3231 RTC module, 2x DL-2416
  * 
@@ -342,7 +342,7 @@ void setup() {
 
   // display welcome message
   
-  sendText("V 1.2");
+  sendText("V 1.3");
   delay(1000);
   if (!rtcFound) {
     sendText("NO RTC");
